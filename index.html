@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html dir="rtl">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/css/bootstrap.rtl.min.css"
+        integrity="sha384-mUkCBeyHPdg0tqB6JDd+65Gpw5h/l8DKcCTV2D2UpaMMFd7Jo8A+mDAosaWgFBPl" crossorigin="anonymous">
+    <link rel="stylesheet" type="text/css" href="css/style.css" />
+
+    <title>تولید طرح میخ و نخ</title>
+</head>
+
+<body>
+    <div class="container">
+        <h1>تولید طرح میخ و نخ</h1>
+        <div style="float: left; margin-top: -40px">
+            قبلا مراحل تولید را طی کرده اید؟
+            <button class="btn btn-primary" onclick="onHasSteps();">
+                کلیک کنید
+            </button>
+        </div>
+        <h2 id="status">لطفا صبر کنید: در حال بارگذاری ...</h2>
+        <br />
+
+        <span>
+            برای دستیابی به نتایج بهتر از تصاویر Close-up با Contrast بالا استفاده
+            کنید.<br />
+            چنانچه این صفحه Crash کرد آن را ریفرش کنید و یا کل پنجره را ببندید و
+            دوباره باز کنید.<br /><br />
+        </span>
+        <br />
+        <div>
+            <h5>متغیرهای قابل تنظیم:</h5>
+        </div>
+        <div class="row">
+            <div class="col">
+                <div class="form-group">
+                    <label for="frameSize">عرض/قطر بوم</label>
+                    <input type="text" class="form-control" id="frameSize" />
+                </div>
+            </div>
+            <div class="col">
+                <div class="form-group">
+                    <label for="margin">حاشیه</label>
+                    <input type="text" class="form-control" id="margin" />
+                </div>
+            </div>
+            <div class="col">
+                <div class="form-group">
+                    <label for="frameGeometry">هندسه بوم</label>
+                    <select class="form-control" id="frameGeometry">
+                        <option>مربع</option>
+                        <option>دایره</option>
+                        <option disabled>هشت ضلعی</option>
+                        <option disabled>قلب</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col">
+                <div class="form-group">
+                    <label for="numberOfPins">تعداد میخ ها</label>
+                    <input type="text" class="form-control" id="numberOfPins" />
+                </div>
+            </div>
+            <div class="col">
+                <div class="form-group">
+                    <label for="numberOfLines">تعداد خطوط</label>
+                    <input type="text" class="form-control" id="numberOfLines" />
+                </div>
+            </div>
+            <div class="col">
+                <div class="form-group">
+                    <label for="lineThickness">ضخامت خطوط</label>
+                    <input type="text" class="form-control" id="lineThickness" />
+                </div>
+            </div>
+            <div class="col">
+                <div class="form-group">
+                    <label for="lineDensity">تراکم خطوط</label>
+                    <input type="text" class="form-control" id="lineDensity" />
+                </div>
+            </div>
+        </div>
+        <div style="margin: 20px 0;">
+            <label class="btn btn-primary btn-file">
+                اینجا را کلیک کرده و تصویر دلخواه تان را انتخاب کنید
+                <input type="file" id="fileInput" style="display: none" />
+            </label>
+        </div>
+
+        <div class="row">
+            <div class="col">
+                <div id="step1" class="inputoutput center hidden">
+                    <img class="centerImage" id="imageSrc" alt="No Image" />
+                </div>
+                <div id="step2" class="inputoutput center hidden">
+                    <div class="caption">تصویر کراپ شد و به خاکستری تبدیل شد:</div>
+                    <canvas class="centerCanvasMedium" id="canvasOutput"></canvas>
+                </div>
+                <div id="step3" class="inputoutput center hidden">
+                    <div class="caption">خروجی طرح میخ و نخ:</div>
+                    <div id="drawStatus"></div>
+                    <canvas class="centerCanvasLarge" id="canvasOutput2"></canvas>
+                </div>
+                <div id="showPins" class="inputoutput center hidden">
+                    <textarea id="pinsOutput" rows="10" cols="100"></textarea>
+                    <br /><br />
+                    <div style="height: 30px">
+                        <button style="float: right" onclick="startCreating();">
+                            شروع محاسبات
+                        </button>
+                        <button style="float: left" onclick="startDrawing();">
+                            فقط نمایش
+                        </button>
+                    </div>
+                </div>
+                <div id="incrementalDrawing" class="inputoutput center hidden">
+                    <div class="caption">خروجی محاسبات:</div>
+                    <span id="incrementalCurrentStep"></span>
+                    <div id="drawStatus"></div>
+                    <canvas class="centerCanvasLarge" id="canvasOutput3"></canvas>
+                    <div style="height: 30px">
+                        <button style="float: left" onclick="lastStep();">
+                            مرحله بعد
+                        </button>
+                        <button style="float: right" onclick="nextStep();">
+                            مرحله قبل
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        // default values
+        let FRAME_SIZE = 400;
+        let MARGIN = 10;
+        let IMG_SIZE = FRAME_SIZE - 2 * MARGIN;
+        let MAX_LINES = 3000;
+        let N_PINS = 200;
+        let MIN_DISTANCE = 1;
+        let LINE_DENSITY = 20;
+        let LINE_THICKNESS = 1;
+        let FILENAME = "";
+        let SCALE = 20;
+        let HOOP_DIAMETER = 0.625;
+
+        let img;
+
+        // set up element variables
+        let imgElement = document.getElementById("imageSrc");
+        let inputElement = document.getElementById("fileInput");
+        inputElement.addEventListener(
+            "change",
+            (e) => {
+                imgElement.src = URL.createObjectURL(e.target.files[0]);
+            },
+            false
+        );
+        var ctx = document.getElementById("canvasOutput").getContext("2d");
+        var ctx2 = document.getElementById("canvasOutput2").getContext("2d");
+        var ctx3 = document.getElementById("canvasOutput3").getContext("2d");
+        let status = document.getElementById("status");
+        let drawStatus = document.getElementById("drawStatus");
+        let showPins = document.getElementById("showPins");
+        let pinsOutput = document.getElementById("pinsOutput");
+        let incrementalDrawing = document.getElementById("incrementalDrawing");
+        let incrementalCurrentStep = document.getElementById(
+            "incrementalCurrentStep"
+        );
+        let frameSize = document.getElementById("frameSize");
+        let margin = document.getElementById("margin");
+        let frameGeometry = document.getElementById("frameGeometry");
+        let numberOfPins = document.getElementById("numberOfPins");
+        let numberOfLines = document.getElementById("numberOfLines");
+        let lineDensity = document.getElementById("lineDensity");
+        let lineThickness = document.getElementById("lineThickness");
+
+        let length;
+        var R = {};
+
+        //pre initilization
+        let pin_coords;
+        let center;
+        let radius;
+
+        let line_cache_y;
+        let line_cache_x;
+        let line_cache_length;
+        let line_cache_density;
+
+        //line variables
+        let error;
+        let img_result;
+        let result;
+        let line_mask;
+
+        let line_sequence;
+        let pin;
+        let thread_length;
+        let last_pins;
+
+        let listenForKeys = false;
+
+        //*******************************
+        //      Line Generation
+        //*******************************
+
+        imgElement.onload = function () {
+            listenForKeys = false;
+            showStep(1);
+            showPins.classList.add("hidden");
+            incrementalDrawing.classList.add("hidden");
+            // Take uploaded picture, square up and put on canvas
+            base_image = new Image();
+            base_image.src = imgElement.src;
+            ctx.canvas.width = IMG_SIZE;
+            ctx.canvas.height = IMG_SIZE;
+            ctx2.canvas.width = IMG_SIZE * 2;
+            ctx2.canvas.height = IMG_SIZE * 2;
+            ctx.clearRect(0, 0, IMG_SIZE, IMG_SIZE);
+
+            var selectedWidth = base_image.width;
+            var selectedHeight = base_image.height;
+            var xOffset = 0;
+            var yOffset = 0;
+            // square crop and center the picture
+            if (base_image.height > base_image.width) {
+                selectedWidth = base_image.width;
+                selectedHeight = base_image.width;
+                yOffset = Math.floor((base_image.height - base_image.width) / 2);
+            } else if (base_image.width > base_image.height) {
+                selectedWidth = base_image.height;
+                selectedHeight = base_image.height;
+                xOffset = Math.floor((base_image.width - base_image.height) / 2);
+            }
+
+            ctx.drawImage(
+                base_image,
+                xOffset,
+                yOffset,
+                selectedWidth,
+                selectedHeight,
+                0,
+                0,
+                IMG_SIZE,
+                IMG_SIZE
+            );
+            length = IMG_SIZE;
+
+            // make grayscale by averaging the RGB channels.
+            // extract out the R channel because that's all we need and push graysacle image onto canvas
+            var imgPixels = ctx.getImageData(0, 0, IMG_SIZE, IMG_SIZE);
+            R = img_result = nj.ones([IMG_SIZE, IMG_SIZE]).multiply(0xff);
+            var rdata = [];
+            for (var y = 0; y < imgPixels.height; y++) {
+                for (var x = 0; x < imgPixels.width; x++) {
+                    var i = y * 4 * imgPixels.width + x * 4;
+                    var avg =
+                        (imgPixels.data[i] +
+                            imgPixels.data[i + 1] +
+                            imgPixels.data[i + 2]) /
+                        3;
+                    imgPixels.data[i] = avg;
+                    imgPixels.data[i + 1] = avg;
+                    imgPixels.data[i + 2] = avg;
+                    rdata.push(avg);
+                }
+            }
+            R.selection.data = rdata;
+            ctx.putImageData(imgPixels, 0, 0, 0, 0, IMG_SIZE, IMG_SIZE);
+
+            // crop canvas based on frame geometry
+            switch (frameGeometry.value) {
+                case "مربع":
+                    ctx.globalCompositeOperation = "destination-in";
+                    ctx.beginPath();
+                    ctx.lineTo(IMG_SIZE, 0);
+                    ctx.lineTo(IMG_SIZE, IMG_SIZE);
+                    ctx.lineTo(0, IMG_SIZE);
+                    ctx.lineTo(0, 0);
+                    ctx.closePath();
+                    ctx.fill();
+                    break;
+                case "دایره":
+                    ctx.globalCompositeOperation = "destination-in";
+                    ctx.beginPath();
+                    ctx.arc(IMG_SIZE / 2, IMG_SIZE / 2, IMG_SIZE / 2, 0, Math.PI * 2);
+                    ctx.closePath();
+                    ctx.fill();
+                    break;
+            }
+
+            // start processing
+            NonBlockingCalculatePins();
+        };
+
+        function NonBlockingCalculatePins() {
+            // set up necessary variables
+            console.log("محاسبه میخ ها ...");
+            status.textContent = "محاسبه میخ ها ...";
+            pin_coords = [];
+            let i = 0;
+            switch (frameGeometry.value) {
+                case "مربع":
+                    spacing = (length - 1) / (N_PINS / 4);
+                    (function codeBlock() {
+                        if (i < N_PINS) {
+                            side_no = Math.floor(i / (N_PINS / 4));
+                            j = i % (N_PINS / 4);
+                            switch (side_no) {
+                                case 0:
+                                    pin_coords.push([
+                                        Math.floor(spacing * j),
+                                        0,
+                                    ]);
+                                    break;
+                                case 1:
+                                    pin_coords.push([
+                                        length - 1,
+                                        Math.floor(spacing * j),
+                                    ]);
+                                    break;
+                                case 2:
+                                    pin_coords.push([
+                                        (length - 1) - Math.floor(spacing * j),
+                                        length - 1
+                                    ]);
+                                    break;
+                                case 3:
+                                    pin_coords.push([
+                                        0,
+                                        (length - 1) - Math.floor(spacing * j),
+                                    ]);
+                                    break;
+                            }
+                            i++;
+                            setTimeout(codeBlock, 0);
+                        } else {
+                            console.log("پایان محاسبه میخ ها");
+                            status.textContent = "پایان محاسبه میخ ها";
+                            showStep(2);
+                            NonBlockingPrecalculateLines();
+                        }
+                    })();
+                    break;
+                case "دایره":
+                    center = length / 2;
+                    radius = length / 2 - 1 / 2;
+                    (function codeBlock() {
+                        if (i < N_PINS) {
+                            angle = (2 * Math.PI * i) / N_PINS;
+                            pin_coords.push([
+                                Math.floor(center + radius * Math.cos(angle)),
+                                Math.floor(center + radius * Math.sin(angle)),
+                            ]);
+                            i++;
+                            setTimeout(codeBlock, 0);
+                        } else {
+                            console.log("پایان محاسبه میخ ها");
+                            status.textContent = "پایان محاسبه میخ ها";
+                            showStep(2);
+                            NonBlockingPrecalculateLines();
+                        }
+                    })();
+                    break;
+            }
+        }
+
+        function NonBlockingPrecalculateLines() {
+            // set up necessary variables
+            console.log("پیش محاسبه همه خطوط ...");
+            status.textContent = "پیش محاسبه همه خطوط ...";
+            line_cache_y = Array.apply(null, { length: N_PINS * N_PINS });
+            line_cache_x = Array.apply(null, { length: N_PINS * N_PINS });
+            line_cache_length = Array.apply(null, { length: N_PINS * N_PINS }).map(
+                Function.call,
+                function () {
+                    return 0;
+                }
+            );
+            line_cache_density = Array.apply(null, { length: N_PINS * N_PINS }).map(
+                Function.call,
+                function () {
+                    return 1;
+                }
+            );
+            let a = 0;
+
+            (function codeBlock() {
+                console.log(pin_coords[20]);
+                if (a < N_PINS) {
+                    for (b = a + MIN_DISTANCE; b < N_PINS; b++) {
+                        x0 = pin_coords[a][0];
+                        y0 = pin_coords[a][1];
+
+                        x1 = pin_coords[b][0];
+                        y1 = pin_coords[b][1];
+
+                        d = Math.floor(
+                            Number(Math.sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0)))
+                        );
+                        xs = linspace(x0, x1, d);
+                        ys = linspace(y0, y1, d);
+
+                        line_cache_y[b * N_PINS + a] = ys;
+                        line_cache_y[a * N_PINS + b] = ys;
+                        line_cache_x[b * N_PINS + a] = xs;
+                        line_cache_x[a * N_PINS + b] = xs;
+                        line_cache_length[b * N_PINS + a] = d;
+                        line_cache_length[a * N_PINS + b] = d;
+                    }
+                    a++;
+                    setTimeout(codeBlock, 0);
+                } else {
+                    console.log("Done Precalculating Lines");
+                    status.textContent = "Done Precalculating Lines";
+                    NonBlockingLineCalculator();
+                    showStep(3);
+                }
+            })();
+        }
+
+        function NonBlockingLineCalculator() {
+            // set up necessary variables
+            console.log("ترسیم خطوط ...");
+            status.textContent = "ترسیم خطوط ...";
+            error = nj
+                .ones([IMG_SIZE, IMG_SIZE])
+                .multiply(0xff)
+                .subtract(nj.uint8(R.selection.data).reshape(IMG_SIZE, IMG_SIZE));
+            img_result = nj.ones([IMG_SIZE, IMG_SIZE]).multiply(0xff);
+            result = nj.ones([IMG_SIZE * SCALE, IMG_SIZE * SCALE]).multiply(0xff);
+            result = new cv.matFromArray(
+                IMG_SIZE * SCALE,
+                IMG_SIZE * SCALE,
+                cv.CV_8UC1,
+                result.selection.data
+            );
+            line_mask = nj.zeros([IMG_SIZE, IMG_SIZE], "float64");
+
+            line_sequence = [];
+            pin = 0;
+            line_sequence.push(pin);
+            thread_length = 0;
+            last_pins = [];
+            let l = 0;
+
+            (function codeBlock() {
+                if (l < MAX_LINES) {
+                    if (l % 10 == 0) {
+                        draw();
+                    }
+
+                    max_err = -1;
+                    best_pin = -1;
+
+                    for (
+                        offset = MIN_DISTANCE;
+                        offset < N_PINS - MIN_DISTANCE;
+                        offset++
+                    ) {
+                        test_pin = (pin + offset) % N_PINS;
+                        if (last_pins.includes(test_pin)) {
+                            continue;
+                        } else {
+                            xs = line_cache_x[test_pin * N_PINS + pin];
+                            ys = line_cache_y[test_pin * N_PINS + pin];
+
+                            line_err =
+                                getLineErr(error, ys, xs) *
+                                line_cache_density[test_pin * N_PINS + pin];
+
+                            if (line_err > max_err) {
+                                max_err = line_err;
+                                best_pin = test_pin;
+                            }
+                        }
+                    }
+
+                    line_sequence.push(best_pin);
+
+                    xs = line_cache_x[best_pin * N_PINS + pin];
+                    ys = line_cache_y[best_pin * N_PINS + pin];
+                    density = LINE_DENSITY * line_cache_density[best_pin * N_PINS + pin];
+
+                    line_mask = nj.zeros([IMG_SIZE, IMG_SIZE], "float64");
+                    line_mask = setLine(line_mask, ys, xs, density);
+                    error = subtractArrays(error, line_mask);
+
+                    p = new cv.Point(
+                        pin_coords[pin][0] * SCALE,
+                        pin_coords[pin][1] * SCALE
+                    );
+                    p2 = new cv.Point(
+                        pin_coords[best_pin][0] * SCALE,
+                        pin_coords[best_pin][1] * SCALE
+                    );
+                    cv.line(result, p, p2, new cv.Scalar(0, 0, 0), LINE_THICKNESS, cv.LINE_AA, 0);
+
+                    x0 = pin_coords[pin][0];
+                    y0 = pin_coords[pin][1];
+
+                    x1 = pin_coords[best_pin][0];
+                    y1 = pin_coords[best_pin][1];
+
+                    dist = Math.sqrt((x1 - x0) * (x1 - x0) + (y1 - y0) * (y1 - y0));
+                    // thread_length += (HOOP_DIAMETER / length) * dist;
+                    thread_length += dist;
+
+                    last_pins.push(best_pin);
+                    if (last_pins.length > 20) {
+                        last_pins.shift();
+                    }
+                    pin = best_pin;
+
+                    //update status
+                    drawStatus.textContent =
+                        l +
+                        " خطوط رسم شده | " +
+                        Math.round((l / MAX_LINES) * 100) +
+                        " درصد کامل شد.";
+
+                    l++;
+                    setTimeout(codeBlock, 0);
+                } else {
+                    console.log("Done Drawing Lines");
+                    console.log(thread_length);
+                    Finalize();
+                }
+            })();
+        }
+
+        function draw() {
+            let dsize = new cv.Size(IMG_SIZE * 2, IMG_SIZE * 2);
+            let dst = new cv.Mat();
+            cv.resize(result, dst, dsize, 0, 0, cv.INTER_AREA);
+            cv.imshow("canvasOutput2", dst);
+            dst.delete();
+        }
+
+        function Finalize() {
+            let dsize = new cv.Size(IMG_SIZE * 2, IMG_SIZE * 2);
+            let dst = new cv.Mat();
+            cv.resize(result, dst, dsize, 0, 0, cv.INTER_AREA);
+
+            console.log("complete");
+            drawStatus.textContent = MAX_LINES + " Lines drawn | 100% complete";
+
+            cv.imshow("canvasOutput2", dst);
+            console.log(line_sequence);
+            status.textContent = "Complete";
+            pinsOutput.value = line_sequence;
+            showPins.classList.remove("hidden");
+            dst.delete();
+            result.delete();
+            window.scrollTo({ top: 5000, left: 0, behavior: "smooth" });
+        }
+
+        function getLineErr(arr, coords1, coords2) {
+            let result = new Uint8Array(coords1.length);
+            for (i = 0; i < coords1.length; i++) {
+                result[i] = arr.get(coords1[i], coords2[i]);
+            }
+            return getSum(result);
+        }
+
+        function setLine(arr, coords1, coords2, line) {
+            for (i = 0; i < coords1.length; i++) {
+                arr.set(coords1[i], coords2[i], line);
+            }
+            return arr;
+        }
+
+        function compareMul(arr1, arr2) {
+            let result = new Uint8Array(arr1.length);
+            for (i = 0; i < arr1.length; i++) {
+                result[i] = (arr1[i] < arr2[i]) * 254 + 1;
+            }
+            return result;
+        }
+
+        function compareAbsdiff(arr1, arr2) {
+            let rsult = new Uint8Array(arr1.length);
+            for (i = 0; i < arr1.length; i++) {
+                rsult[i] = arr1[i] * arr2[i];
+            }
+            return rsult;
+        }
+
+        function subtractArrays(arr1, arr2) {
+            for (i = 0; i < arr1.selection.data.length; i++) {
+                arr1.selection.data[i] =
+                    arr1.selection.data[i] - arr2.selection.data[i];
+                if (arr1.selection.data[i] < 0) {
+                    arr1.selection.data[i] = 0;
+                } else if (arr1.selection.data[i] > 255) {
+                    arr1.selection.data[i] = 255;
+                }
+            }
+            return arr1;
+        }
+
+        function subtractArraysSimple(arr1, arr2) {
+            for (i = 0; i < arr1.length; i++) {
+                arr1[i] = arr1[i] - arr2[i];
+            }
+            return arr1;
+        }
+
+        function getSum(arr) {
+            let v = 0;
+            for (i = 0; i < arr.length; i++) {
+                v = v + arr[i];
+            }
+            return v;
+        }
+
+        function makeArr(startValue, stopValue, cardinality) {
+            var arr = [];
+            var currValue = startValue;
+            var step = (stopValue - startValue) / (cardinality - 1);
+            for (var i = 0; i < cardinality; i++) {
+                arr.push(Math.round(currValue + step * i));
+            }
+            return arr;
+        }
+
+        function AddRGB(arr1, arr2, arr3) {
+            for (i = 0; i < arr1.data.length; i++) {
+                var avg = arr1.data[i] + arr2.data[i] + arr3.data[i];
+                arr1.data[i] = avg;
+            }
+            return arr1;
+        }
+
+        function linspace(a, b, n) {
+            if (typeof n === "undefined") n = Math.max(Math.round(b - a) + 1, 1);
+            if (n < 2) {
+                return n === 1 ? [a] : [];
+            }
+            var i,
+                ret = Array(n);
+            n--;
+            for (i = n; i >= 0; i--) {
+                ret[i] = Math.floor((i * b + (n - i) * a) / n);
+            }
+            return ret;
+        }
+
+        function showStep(id) {
+            let step1 = document.getElementById("step1");
+            let step2 = document.getElementById("step2");
+            let step3 = document.getElementById("step3");
+
+            switch (id) {
+                case 1:
+                    step1.classList.remove("hidden");
+                    step2.classList.add("hidden");
+                    step3.classList.add("hidden");
+                    break;
+                case 2:
+                    step1.classList.add("hidden");
+                    step2.classList.remove("hidden");
+                    step3.classList.add("hidden");
+                    break;
+                case 3:
+                    step1.classList.add("hidden");
+                    step2.classList.add("hidden");
+                    step3.classList.remove("hidden");
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        //********************************
+        //      Creation Assistant
+        //********************************
+
+        var pointIndex = 0;
+        var lastStepImage;
+
+        function startCreating() {
+            window.speechSynthesis.getVoices();
+            incrementalDrawing.classList.remove("hidden");
+
+            base_image2 = new Image();
+            ctx3.canvas.width = IMG_SIZE * 2;
+            ctx3.canvas.height = IMG_SIZE * 2;
+            ctx3.clearRect(0, 0, IMG_SIZE * 2, IMG_SIZE * 2);
+            ctx3.drawImage(base_image2, 0, 0, IMG_SIZE * 2, IMG_SIZE * 2);
+
+            line_sequence = pinsOutput.value.split(",").map((V) => {
+                return parseInt(V);
+            });
+
+            window.scrollTo({ top: 5000, left: 0, behavior: "smooth" });
+
+            incrementalCurrentStep.textContent = "";
+            pointIndex = 0;
+            if (pin_coords == null) {
+                CalculatePins();
+            }
+            nextStep();
+            listenForKeys = true;
+        }
+
+        function startDrawing() {
+            incrementalDrawing.classList.remove("hidden");
+            listenForKeys = false;
+
+            base_image2 = new Image();
+            ctx3.canvas.width = IMG_SIZE * 2;
+            ctx3.canvas.height = IMG_SIZE * 2;
+            ctx3.clearRect(0, 0, IMG_SIZE * 2, IMG_SIZE * 2);
+            ctx3.drawImage(base_image2, 0, 0, IMG_SIZE * 2, IMG_SIZE * 2);
+
+            line_sequence = pinsOutput.value.split(",").map((V) => {
+                return parseInt(V);
+            });
+
+            window.scrollTo({ top: 5000, left: 0, behavior: "smooth" });
+
+            incrementalCurrentStep.textContent = "";
+            pointIndex = 0;
+            if (pin_coords == null) {
+                CalculatePins();
+            }
+
+            let j = 0;
+            (function codeBlock() {
+                if (j < MAX_LINES - 1) {
+                    //incrementalCurrentStep.textContent = "Current Line: " + (pointIndex + 1) + " |  Pin " + line_sequence[pointIndex] + " to " + line_sequence[pointIndex + 1];
+                    pointIndex++;
+                    ctx3.beginPath();
+                    ctx3.moveTo(
+                        pin_coords[line_sequence[pointIndex - 1]][0] * 2,
+                        pin_coords[line_sequence[pointIndex - 1]][1] * 2
+                    );
+                    ctx3.lineTo(
+                        pin_coords[line_sequence[pointIndex]][0] * 2,
+                        pin_coords[line_sequence[pointIndex]][1] * 2
+                    );
+                    ctx3.strokeStyle = "black";
+                    ctx3.lineWidth = 0.3;
+                    ctx3.stroke();
+                    j++;
+                    setTimeout(codeBlock, 0);
+                } else {
+                }
+            })();
+        }
+
+        function nextStep() {
+            if (pointIndex > MAX_LINES - 1) {
+                return;
+            }
+            incrementalCurrentStep.textContent =
+                "Current Line: " +
+                (pointIndex + 1) +
+                " |  Pin " +
+                line_sequence[pointIndex] +
+                " to " +
+                line_sequence[pointIndex + 1];
+
+            if (pointIndex > 0) {
+                //ctx3.clearRect(0,0, IMG_SIZE * 2, IMG_SIZE * 2);
+                ctx3.putImageData(lastStepImage, 0, 0);
+                ctx3.beginPath();
+                ctx3.moveTo(
+                    pin_coords[line_sequence[pointIndex - 1]][0] * 2,
+                    pin_coords[line_sequence[pointIndex - 1]][1] * 2
+                );
+                ctx3.lineTo(
+                    pin_coords[line_sequence[pointIndex]][0] * 2,
+                    pin_coords[line_sequence[pointIndex]][1] * 2
+                );
+                ctx3.strokeStyle = "black";
+                ctx3.lineWidth = 0.3;
+                ctx3.stroke();
+            }
+
+            lastStepImage = ctx3.getImageData(0, 0, IMG_SIZE * 2, IMG_SIZE * 2);
+
+            pointIndex++;
+            ctx3.beginPath();
+            ctx3.moveTo(
+                pin_coords[line_sequence[pointIndex - 1]][0] * 2,
+                pin_coords[line_sequence[pointIndex - 1]][1] * 2
+            );
+            ctx3.lineTo(
+                pin_coords[line_sequence[pointIndex]][0] * 2,
+                pin_coords[line_sequence[pointIndex]][1] * 2
+            );
+            ctx3.strokeStyle = "#FF0000";
+            ctx3.lineWidth = 1;
+            ctx3.stroke();
+
+            //window.speechSynthesis.speak(new SpeechSynthesisUtterance(line_sequence[pointIndex + 1]));
+        }
+
+        function lastStep() {
+            if (pointIndex < 2) {
+                return;
+            }
+            pointIndex--;
+            pointIndex--;
+            ctx3.clearRect(0, 0, IMG_SIZE * 2, IMG_SIZE * 2);
+            incrementalCurrentStep.textContent =
+                "Current Line: " +
+                (pointIndex + 1) +
+                " |  Pin " +
+                line_sequence[pointIndex] +
+                " to " +
+                line_sequence[pointIndex + 1];
+
+            for (i = 0; i < pointIndex; i++) {
+                ctx3.beginPath();
+                ctx3.moveTo(
+                    pin_coords[line_sequence[i]][0] * 2,
+                    pin_coords[line_sequence[i]][1] * 2
+                );
+                ctx3.lineTo(
+                    pin_coords[line_sequence[i + 1]][0] * 2,
+                    pin_coords[line_sequence[i + 1]][1] * 2
+                );
+                ctx3.strokeStyle = "black";
+                ctx3.lineWidth = 0.3;
+                ctx3.stroke();
+            }
+            lastStepImage = ctx3.getImageData(0, 0, IMG_SIZE * 2, IMG_SIZE * 2);
+            pointIndex++;
+            ctx3.beginPath();
+            ctx3.moveTo(
+                pin_coords[line_sequence[pointIndex - 1]][0] * 2,
+                pin_coords[line_sequence[pointIndex - 1]][1] * 2
+            );
+            ctx3.lineTo(
+                pin_coords[line_sequence[pointIndex]][0] * 2,
+                pin_coords[line_sequence[pointIndex]][1] * 2
+            );
+            ctx3.strokeStyle = "#FF0000";
+            ctx3.lineWidth = 1;
+            ctx3.stroke();
+        }
+
+        function CalculatePins() {
+            console.log("محاسبه میخ ها ...");
+            pin_coords = [];
+            center = IMG_SIZE / 2;
+            radius = IMG_SIZE / 2 - 1 / 2;
+
+            for (i = 0; i < N_PINS; i++) {
+                angle = (2 * Math.PI * i) / N_PINS;
+                pin_coords.push([
+                    Math.floor(center + radius * Math.cos(angle)),
+                    Math.floor(center + radius * Math.sin(angle)),
+                ]);
+            }
+        }
+
+        function onHasSteps() {
+            step1.classList.add("hidden");
+            step2.classList.add("hidden");
+            step3.classList.add("hidden");
+            showPins.classList.remove("hidden");
+            window.scrollTo({ top: 5000, left: 0, behavior: "smooth" });
+        }
+
+        document.body.onkeydown = function (e) {
+            if (!listenForKeys) {
+                return;
+            }
+            if (e.keyCode == 32) {
+                // space bar
+                nextStep();
+            } else if (e.keyCode == 39) {
+                //right key
+                nextStep();
+            } else if (e.keyCode == 37) {
+                //left key
+                lastStep();
+            }
+        };
+
+        function onOpenCvReady() {
+            // even when this is called, sometimes it's still not ready, adding slight time buffer
+            setTimeout(function () {
+                document.getElementById("status").innerHTML = "محاسبه گر آماده است.";
+            }, 1000);
+
+            frameSize.value = FRAME_SIZE;
+            frameSize.addEventListener("keyup", function (event) {
+                FRAME_SIZE = parseInt(event.target.value);
+            });
+
+            margin.value = MARGIN;
+            margin.addEventListener("keyup", function (event) {
+                MARGIN = parseInt(event.target.value);
+            });
+
+            numberOfPins.value = N_PINS;
+            numberOfPins.addEventListener("keyup", function (event) {
+                N_PINS = parseInt(event.target.value);
+            });
+
+            numberOfLines.value = MAX_LINES;
+            numberOfLines.addEventListener("keyup", function (event) {
+                MAX_LINES = parseInt(event.target.value);
+            });
+
+            lineThickness.value = LINE_THICKNESS;
+            lineThickness.addEventListener("keyup", function (event) {
+                LINE_THICKNESS = parseInt(event.target.value);
+            });
+
+            lineDensity.value = LINE_DENSITY;
+            lineDensity.addEventListener("keyup", function (event) {
+                LINE_DENSITY = parseInt(event.target.value);
+            });
+        }
+    </script>
+    <script async src="scripts/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/gh/nicolaspanel/numjs@0.15.1/dist/numjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta1/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-ygbV9kiqUc6oa4msXn9868pTtWMgiQaeYH7/t7LECLbyPA2x65Kgf80OJFdroafW"
+        crossorigin="anonymous"></script>
+</body>
+
+</html>
